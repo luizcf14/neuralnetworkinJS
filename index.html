@@ -1,0 +1,156 @@
+<!-- /**** -->
+ <!-- * Code developed by Luiz Cortinhas  -->
+ <!-- This user interface is adjusted from https://github.com/wagenaartje/neataptic -->
+ <!-- *  -->
+ <!-- */ -->
+<html>
+<head>
+	<link rel="stylesheet" href="css/bootstrap.min.css">
+	<script src="js/jquery-3.2.1.min.js"></script>
+	<script src="js/bootstrap.min.js"></script>
+	<script src="js/mlp.js"></script>
+	<style>
+		.mycontainer{
+			width:100vw;
+			text-align:center;
+		}
+		.force-center{
+			position: absolute;
+			top: 50%;
+			left: 50%;
+		    margin-left: -40vw;
+		    width: 80vw;
+		}
+	</style>
+</head>
+<body>
+	<title>Neural Network - Solved</title>
+	<div class="container mycontainer">
+		<table class="table" style="text-align:center;">
+			<thead>
+				<tr><th colspan="3">Construct your Model</th></tr>
+			</thead>
+			</tbody>
+				<tr>
+					<td>Learning Rate: <input type="text" class="form-control" id="input_lr" value="0.1"></td>
+					<td rowspan="3">model structure<br><textarea class="form-control" rows="7" cols="25" id="input_model">OO sigmoid OOO sigmoid O</textarea></td>
+					<td rowspan="3">datasets<br><textarea class="form-control" rows="7" cols="25" id="input_datasets"></textarea></td>
+				</tr>
+				<tr>
+					<td>
+					Loss Function
+					<div class="form-group">
+						<select class="combobox form-control" id="input_loss">
+							<option value="mse" selected="selected">Mean Square Error</option>
+							<option value="ce">Cross Entropy</option>
+						</select>
+					</div>
+					</td>
+				</tr>
+				<tr>
+					<td>Training Epochs: <input type="text" class="form-control" id="input_epoch" value="10000"></td>
+				</tr>
+				<tr>
+					<td colspan="3"><button type="button" class="btn btn-primary" id="train_btn" onclick="get_infos()">compile & train</button></td>
+				</tr>
+			</tbody>
+		</table>
+		
+		<div class="alert alert-success alert-dismissable fade in force-center" id="success_modal" style="display: none">
+			<a class="close" onclick="$('#success_modal').hide()">&times;</a>
+			<strong>Success!</strong> Now you can predict something!!! .
+		</div>
+		
+		<table class="table" style="text-align:center;">
+			<thead>
+				<tr><th colspan="3">Prediction Section</th></tr>
+			</thead>
+			</tbody>
+				<tr>
+					<td>Input Data<br><input type="text" class="form-control" id="test_data"></td>
+					<td><br><button type="button" class="btn btn-success" onclick="predict()" id="test_btn" disabled>predict</button></td>
+					<td><p id="predict_result">Result: Null<br>---</p></td>
+				</tr>
+			</tbody>
+		</table>
+		
+	</div>
+        <!-- <hr> -->
+        <!-- <div><b>EXAMPLE:</b></div> -->
+        <!-- <div><img src="example.PNG" style="width: 550px;"/> -->
+        <!-- </div> -->
+	
+	<script>
+		var W = null;
+		var model = null;
+		
+		function get_infos(){
+			document.getElementById("test_btn").setAttribute("disabled","");
+			document.getElementById("train_btn").setAttribute("disabled","");
+			
+			var layer_size = [];
+			var X = [];
+			var Y = [];
+			var activation_functions = [];
+			
+			var epochs = parseInt(document.getElementById("input_epoch").value);
+			var loss_function = document.getElementById("input_loss").value;
+			var lr = parseFloat(document.getElementById("input_lr").value);
+			
+			var model_structure = document.getElementById("input_model").value;
+			model_structure = model_structure.split("\n");
+			for(var cmd=0; cmd<model_structure.length; cmd++){
+				if(model_structure[cmd][0]=='O' && model_structure[cmd][model_structure[cmd].length-1]=='O'){
+					layer_size.push(model_structure[cmd].length);
+				} else if(model_structure[cmd]=="sigmoid" || model_structure[cmd]=="softmax"){ //todo
+					activation_functions.push(model_structure[cmd].concat());
+				}
+			}
+			
+			var datasets = document.getElementById("input_datasets").value;
+			datasets = datasets.split("\n");
+			console.log(datasets);
+			for(var i_set=0; i_set<datasets.length; i_set++){
+				var this_dataset = datasets[i_set].split("=");
+				X.push(this_dataset[0].split(",").concat());
+				Y.push(this_dataset[1].split(",").concat());
+			}
+			
+			
+			var flag = start_training(layer_size, X, Y, epochs, activation_functions, loss_function, lr);
+			if(flag){
+				document.getElementById("success_modal").style.display="block";
+				document.getElementById("test_btn").removeAttribute("disabled");
+				document.getElementById("train_btn").removeAttribute("disabled");
+			}
+		}
+		
+		function start_training(layer_size, X, Y, epochs, activation_functions, loss_function, lr){
+			W = initialize_weights(layer_size, min_n=-1.0, max_n=1.0);
+			console.log('Start Training..');
+			model = new MLP(W, layer_size, activation_functions, loss_function, lr);
+		
+			model.train(X,Y,epochs);
+			
+			return true;
+		}
+		
+		function predict(){
+			var input_data = document.getElementById("test_data").value;
+			input_data = input_data.split(",");
+			
+			var pred_values = model.predict(input_data);
+			var pred_classes = [];
+			for(var i=0; i<pred_values.length; i++){
+				if(pred_values[i] >= 0.5){
+					pred_classes.push("1");
+				} else {
+					pred_classes.push("0");
+				}
+			}
+		
+			document.getElementById("predict_result").innerHTML = "Result: "+pred_classes+"<br>(true value: "+pred_values+")";
+		}
+	</script>
+</body>
+</html>
